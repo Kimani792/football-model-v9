@@ -2,10 +2,11 @@ import json
 import os
 from datetime import date, datetime
 import numpy as np
+import pandas as pd
 import streamlit as st
 
 # ==============================================================================
-# UI CONFIGURATION & CUSTOM CSS (SPORTSBOOK THEME WITH LOGOS)
+# UI CONFIGURATION & CUSTOM VISUAL STYLING
 # ==============================================================================
 st.set_page_config(
     page_title="V9.3 Interactive Betting Engine", layout="wide", page_icon="⚽"
@@ -25,6 +26,22 @@ st.markdown(
         box-shadow: 0 8px 16px rgba(0,0,0,0.4);
     }
     
+    .history-card {
+        background: #161b22;
+        border-left: 5px solid #30363d;
+        border-top: 1px solid #30363d;
+        border-right: 1px solid #30363d;
+        border-bottom: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+    }
+    
+    .badge-win { background-color: #238636; color: white; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+    .badge-loss { background-color: #da3633; color: white; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+    .badge-pending { background-color: #d29922; color: black; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+    .badge-push { background-color: #8b949e; color: white; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+    
     .match-header {
         font-size: 0.95rem;
         font-weight: 700;
@@ -32,35 +49,12 @@ st.markdown(
         border-bottom: 1px solid #30363d;
         padding-bottom: 8px;
         margin-bottom: 16px;
-        letter-spacing: 0.5px;
     }
     
-    .team-box {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
-    }
-    
-    .team-logo {
-        width: 38px;
-        height: 38px;
-        object-fit: contain;
-        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
-    }
-    
-    .team-name {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #ffffff;
-    }
-    
-    .vs-divider {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #8b949e;
-        margin: 4px 0 10px 50px;
-    }
+    .team-box { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .team-logo { width: 36px; height: 36px; object-fit: contain; }
+    .team-name { font-size: 1.3rem; font-weight: 800; color: #ffffff; }
+    .vs-divider { font-size: 0.85rem; font-weight: 700; color: #8b949e; margin: 2px 0 8px 48px; }
     
     .value-box {
         background-color: rgba(46, 160, 67, 0.15);
@@ -76,12 +70,12 @@ st.markdown(
 
 st.title("⚽ Predictor, Stake Allocator & P/L Tracker")
 st.caption(
-    "Set bankroll allocations, analyze matches with team badges, and track real-time P/L."
+    "Set bankroll allocations, analyze matches with team badges, and track real-time profit graphs."
 )
 st.divider()
 
 # ==============================================================================
-# FIXTURE DATABASE (WITH TEAM LOGO URLS)
+# FIXTURE DATABASE
 # ==============================================================================
 FIXTURE_DATABASE = [
     {
@@ -92,8 +86,6 @@ FIXTURE_DATABASE = [
         "away": "Málaga CF",
         "home_logo": "https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg",
         "away_logo": "https://upload.wikimedia.org/wikipedia/en/8/82/Malaga_cf.svg",
-        "home_xg": 2.15,
-        "away_xg": 0.55,
         "suggested_bet": "Atlético Madrid -1.25 AH",
         "prob": 0.72,
         "odds": 1.95,
@@ -107,8 +99,6 @@ FIXTURE_DATABASE = [
         "away": "Parma",
         "home_logo": "https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg",
         "away_logo": "https://upload.wikimedia.org/wikipedia/en/a/a9/Parma_Calcio_1913_logo.svg",
-        "home_xg": 2.10,
-        "away_xg": 0.70,
         "suggested_bet": "Inter Milan Win & Over 1.5 Goals",
         "prob": 0.68,
         "odds": 1.65,
@@ -122,8 +112,6 @@ FIXTURE_DATABASE = [
         "away": "Coventry City",
         "home_logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
         "away_logo": "https://upload.wikimedia.org/wikipedia/en/9/94/Coventry_City_FC_logo.svg",
-        "home_xg": 2.45,
-        "away_xg": 0.40,
         "suggested_bet": "Arsenal -1.5 Asian Handicap",
         "prob": 0.785,
         "odds": 1.75,
@@ -137,8 +125,6 @@ FIXTURE_DATABASE = [
         "away": "Fulham",
         "home_logo": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg",
         "away_logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Fulham_FC_%28shield%29.svg",
-        "home_xg": 1.90,
-        "away_xg": 1.10,
         "suggested_bet": "Over 2.5 Total Goals",
         "prob": 0.58,
         "odds": 1.85,
@@ -152,8 +138,6 @@ FIXTURE_DATABASE = [
         "away": "Augsburg",
         "home_logo": "https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg",
         "away_logo": "https://upload.wikimedia.org/wikipedia/en/c/c5/FC_Augsburg_logo.svg",
-        "home_xg": 2.80,
-        "away_xg": 0.60,
         "suggested_bet": "Bayern Munich -2.0 AH",
         "prob": 0.70,
         "odds": 1.90,
@@ -175,7 +159,13 @@ class AutomatedCLVTracker:
     if os.path.exists(self.log_file):
       try:
         with open(self.log_file, "r") as f:
-          return json.load(f)
+          data = json.load(f)
+          for entry in data:
+            if "actual_stake" not in entry:
+              entry["actual_stake"] = entry.get("recommended_stake", 0.0)
+            if "recommended_stake" not in entry:
+              entry["recommended_stake"] = entry.get("actual_stake", 0.0)
+          return data
       except Exception:
         return []
     return []
@@ -218,7 +208,7 @@ class AutomatedCLVTracker:
         if actual_stake is not None:
           entry["actual_stake"] = float(actual_stake)
 
-        stake = entry["actual_stake"]
+        stake = entry.get("actual_stake", entry.get("recommended_stake", 0.0))
         odds = entry["taken_odds"]
         res = result.upper()
 
@@ -249,8 +239,8 @@ tracker = AutomatedCLVTracker()
 # ==============================================================================
 tab1, tab2, tab3 = st.tabs([
     "📅 Match Selection & Staking Panel",
-    "📊 Model Performance & Result Tracker",
-    "📜 Full Bet History Log",
+    "📈 Visual Performance Analytics",
+    "📜 Visual Bet Slip History",
 ])
 
 # ------------------------------------------------------------------------------
@@ -329,7 +319,6 @@ with tab1:
       rec_stake_cash = (rec_stake_pct / 100.0) * total_bankroll
       ev_pct = ((p * match_data["odds"]) - 1.0) * 100.0
 
-      # Dynamic HTML Card displaying team logos
       st.markdown(
           f"""
             <div class="bet-card">
@@ -387,7 +376,7 @@ with tab1:
           st.success(f"Bet Slip Logged! Calculated CLV: {clv:+.2f}%")
 
 # ------------------------------------------------------------------------------
-# TAB 2: RESULT TRACKER & PERFORMANCE ANALYTICS
+# TAB 2: VISUAL PERFORMANCE ANALYTICS
 # ------------------------------------------------------------------------------
 with tab2:
   st.subheader("Match Result Input Window")
@@ -412,8 +401,13 @@ with tab2:
 
     with c_update2:
       with st.form("result_update_form"):
+        default_stake_val = float(
+            target_bet.get(
+                "actual_stake", target_bet.get("recommended_stake", 0.0)
+            )
+        )
         actual_staked_final = st.number_input(
-            "Final Staked Amount", value=float(target_bet["actual_stake"])
+            "Final Staked Amount", value=default_stake_val
         )
         match_outcome = st.selectbox(
             "Match Outcome", ["WIN", "LOSS", "PUSH"]
@@ -424,58 +418,104 @@ with tab2:
           tracker.update_result(
               target_id, match_outcome, actual_staked_final
           )
-          st.success(
-              f"Bet ID {target_id} updated to {match_outcome}! Performance"
-              " metrics recalculated."
-          )
+          st.success(f"Bet ID {target_id} updated to {match_outcome}!")
           st.rerun()
   else:
     st.info("No pending bets waiting for result input.")
 
   st.divider()
-  st.subheader("📈 Overall Model Validation & Profit Analytics")
+  st.subheader("📊 Visual Cumulative Profit & Bankroll Curve")
 
   settled_bets = [e for e in tracker.entries if e.get("result") != "PENDING"]
 
   if settled_bets:
-    total_wagered = sum(b["actual_stake"] for b in settled_bets)
-    total_pnl = sum(b["profit_loss"] for b in settled_bets)
-    wins = len([b for b in settled_bets if b["result"] == "WIN"])
-    total_settled = len(
-        [b for b in settled_bets if b["result"] in ["WIN", "LOSS"]]
+    total_wagered = sum(
+        b.get("actual_stake", b.get("recommended_stake", 0.0))
+        for b in settled_bets
     )
+    total_pnl = sum(b.get("profit_loss", 0.0) for b in settled_bets)
+    wins = len([b for b in settled_bets if b.get("result") == "WIN"])
+    losses = len([b for b in settled_bets if b.get("result") == "LOSS"])
+    total_settled = wins + losses
 
     win_rate = (wins / total_settled * 100.0) if total_settled > 0 else 0.0
     roi_pct = (total_pnl / total_wagered * 100.0) if total_wagered > 0 else 0.0
-    avg_clv = np.mean([b["clv_pct"] for b in tracker.entries])
+    avg_clv = (
+        np.mean([b.get("clv_pct", 0.0) for b in tracker.entries])
+        if tracker.entries
+        else 0.0
+    )
 
+    # Key Summary Metrics Cards
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total Settled Bets", f"{len(settled_bets)}")
+    m1.metric("Settled Wagers", f"{len(settled_bets)}")
     m2.metric("Total Capital Staked", f"{total_wagered:,.2f}")
     m3.metric("Net Profit / Loss", f"{total_pnl:+,.2f}")
-    m4.metric("Return on Investment (ROI)", f"{roi_pct:+.2f}%")
-    m5.metric("Model Win Rate", f"{win_rate:.1f}%")
+    m4.metric("ROI Yield", f"{roi_pct:+.2f}%")
+    m5.metric("Win Rate", f"{win_rate:.1f}%")
 
-    if roi_pct > 0:
-      st.success(
-          f"✅ **STRATEGY IS PROFITABLE**: Current Yield is **+{roi_pct:.2f}%**"
-          f" across {len(settled_bets)} settled bets with average CLV of"
-          f" **+{avg_clv:.2f}%**."
+    # Interactive Profit Growth Chart
+    chart_data = []
+    running_pnl = 0.0
+    for idx, bet in enumerate(settled_bets, start=1):
+      running_pnl += bet.get("profit_loss", 0.0)
+      chart_data.append(
+          {"Bet Number": idx, "Cumulative Profit": running_pnl, "Date": bet["date"]}
       )
-    else:
-      st.error(
-          f"❌ **STRATEGY IS UNDERPERFORMING**: Net loss of"
-          f" **{total_pnl:,.2f}** ({roi_pct:.2f}% ROI)."
-      )
+
+    df_chart = pd.DataFrame(chart_data)
+    st.line_chart(df_chart, x="Bet Number", y="Cumulative Profit")
+
+    # Visual Outcome Breakdown
+    st.markdown("#### Wager Outcome Distribution")
+    st.progress(win_rate / 100.0 if win_rate > 0 else 0.0)
+    st.caption(
+        f"🟢 **Wins:** {wins} &nbsp;|&nbsp; 🔴 **Losses:** {losses} &nbsp;|&nbsp;"
+        f" 🟡 **Pending:** {len(pending_bets)}"
+    )
+
   else:
-    st.info("No settled bets recorded yet. Mark a pending wager as WIN/LOSS.")
+    st.info("No settled bets recorded yet. Mark a pending wager to generate charts.")
 
 # ------------------------------------------------------------------------------
-# TAB 3: FULL BET HISTORY LOG
+# TAB 3: VISUAL BET SLIP HISTORY
 # ------------------------------------------------------------------------------
 with tab3:
-  st.subheader("Complete Wager History Log")
+  st.subheader("📜 Visual Bet Slip Cards")
+
   if tracker.entries:
-    st.dataframe(tracker.entries, use_container_width=True)
+    for bet in reversed(tracker.entries):
+      res = bet.get("result", "PENDING").upper()
+      if res == "WIN":
+        badge_html = '<span class="badge-win">🟢 WIN</span>'
+        pnl_text = f'<span style="color:#3fb950; font-weight:bold;">+{bet.get("profit_loss",0.0):,.2f}</span>'
+      elif res == "LOSS":
+        badge_html = '<span class="badge-loss">🔴 LOSS</span>'
+        pnl_text = f'<span style="color:#f85149; font-weight:bold;">{bet.get("profit_loss",0.0):,.2f}</span>'
+      elif res == "PUSH":
+        badge_html = '<span class="badge-push">⚪ PUSH</span>'
+        pnl_text = '<span>0.00</span>'
+      else:
+        badge_html = '<span class="badge-pending">🟡 PENDING</span>'
+        pnl_text = '<span style="color:#8b949e;">Awaiting Result</span>'
+
+      st.markdown(
+          f"""
+            <div class="history-card">
+                <div style="display:flex; justify-between; align-items:center; margin-bottom:6px;">
+                    <span style="color:#8b949e; font-size:0.85rem;"><b>ID #{bet['id']}</b> | {bet['date']} | {bet['league']}</span>
+                    <div>{badge_html}</div>
+                </div>
+                <div style="font-size:1.15rem; font-weight:bold; color:#f0f6fc;">{bet['match']}</div>
+                <div style="color:#58a6ff; font-weight:600; margin-top:4px;">Selection: {bet['bet_type']} @ {bet['taken_odds']}</div>
+                <div style="display:flex; gap:20px; margin-top:10px; font-size:0.9rem; color:#8b949e; border-top:1px solid #21262d; padding-top:8px;">
+                    <div>Stake: <b style="color:#ffffff;">{bet.get('actual_stake',0.0):,.2f}</b></div>
+                    <div>CLV: <b style="color:#3fb950;">{bet.get('clv_pct',0.0):+.2f}%</b></div>
+                    <div>Profit/Loss: {pnl_text}</div>
+                </div>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
   else:
-    st.info("No bet slips logged in `clv_tracker_2026_27.json`.")
+    st.info("No bet slips logged yet.")
