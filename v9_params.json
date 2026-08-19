@@ -1,0 +1,67 @@
+{
+  "version": "9.0",
+  "data_source": "StatsBomb open data \u2014 990 matches (PL/La Liga 2015/16, WC 2018/22, Euro 2020/24)",
+  "n_matches_fitted": 1849,
+  "dixon_coles": {
+    "home_advantage_domestic": 1.30496,
+    "home_advantage_international": 1.0,
+    "rho_domestic": -0.04043,
+    "rho_international": -0.00582,
+    "note": "rho near-zero when using xG lambdas \u2014 DC correction not needed"
+  },
+  "league_averages_xg_per_team": {
+    "Bundesliga 2015/16": 1.3805,
+    "Copa America 2024": 1.8047,
+    "FIFA World Cup 2018": 1.6854,
+    "FIFA World Cup 2022": 1.5578,
+    "La Liga 2009/10": 1.4006,
+    "La Liga 2010/11": 1.261,
+    "La Liga 2011/12": 1.5648,
+    "La Liga 2013/14": 1.5129,
+    "La Liga 2014/15": 1.5855,
+    "La Liga 2015/16": 1.2951,
+    "La Liga 2016/17": 1.6452,
+    "La Liga 2017/18": 1.5069,
+    "La Liga 2018/19": 1.4173,
+    "La Liga 2019/20": 1.4317,
+    "La Liga 2020/21": 1.4329,
+    "Ligue 1 2015/16": 1.1646,
+    "Premier League 2015/16": 1.283,
+    "Serie A 2015/16": 1.212,
+    "UEFA Euro 2020": 1.7804,
+    "UEFA Euro 2024": 1.4133
+  },
+  "global_avg_xg_per_team": 1.303,
+  "rolling_window_games": 6,
+  "platt_calibration": {
+    "home": {
+      "a": 0.57396,
+      "b": -0.04024
+    },
+    "draw": {
+      "a": 0.259,
+      "b": -0.74845
+    },
+    "away": {
+      "a": 0.51518,
+      "b": -0.44334
+    }
+  },
+  "performance": {
+    "brier_insample": 0.61849,
+    "brier_calibrated": 0.60132,
+    "brier_holdout": 0.59406,
+    "accuracy_1x2_insample": 0.49594,
+    "accuracy_1x2_calibrated": 0.50838,
+    "accuracy_1x2_holdout": 0.53333,
+    "random_brier_baseline": 0.6667,
+    "improvement_over_random": 0.06538
+  },
+  "key_corrections_vs_v8": [
+    "home_advantage 1.12 \u2192 1.29 (data-fitted)",
+    "rho -0.09 \u2192 ~0.0 (xG lambdas make DC correction redundant)",
+    "added Platt scaling for calibration at extreme probabilities",
+    "kelly_cap reduced to 0.03 (3%) given low xG R\u00b2 uncertainty",
+    "tournament goal multiplier removed (data shows intl < domestic goals)"
+  ]
+}

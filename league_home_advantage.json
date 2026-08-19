@@ -1,0 +1,27 @@
+{
+  "Bundesliga": {
+    "model_h": 0.4588,
+    "close_h": 0.4455,
+    "new_ha": 1.2671
+  },
+  "La Liga": {
+    "model_h": 0.4625,
+    "close_h": 0.4427,
+    "new_ha": 1.2492
+  },
+  "Ligue 1": {
+    "model_h": 0.4541,
+    "close_h": 0.4352,
+    "new_ha": 1.2507
+  },
+  "Premier League": {
+    "model_h": 0.4596,
+    "close_h": 0.4379,
+    "new_ha": 1.2433
+  },
+  "Serie A": {
+    "model_h": 0.4576,
+    "close_h": 0.4294,
+    "new_ha": 1.2244
+  }
+}

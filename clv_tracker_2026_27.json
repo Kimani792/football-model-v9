@@ -1,0 +1,26 @@
+[
+    {
+        "id": 1,
+        "date": "2026-08-19",
+        "league": "LA_LIGA",
+        "match": "Atlético Madrid vs Málaga CF",
+        "bet_type": "Atlético Madrid -1.25 AH",
+        "taken_odds": 1.95,
+        "closing_odds": 1.88,
+        "clv_pct": 3.72,
+        "stake": 250.0,
+        "result": "PENDING"
+    },
+    {
+        "id": 2,
+        "date": "2026-08-21",
+        "league": "EPL",
+        "match": "Arsenal vs Coventry City",
+        "bet_type": "Arsenal -1.5 AH",
+        "taken_odds": 1.75,
+        "closing_odds": 1.68,
+        "clv_pct": 4.17,
+        "stake": 200.0,
+        "result": "PENDING"
+    }
+]
