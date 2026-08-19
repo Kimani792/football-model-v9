@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 # ==============================================================================
-# UI CONFIGURATION & CUSTOM VISUAL STYLING
+# UI CONFIGURATION & CUSTOM STYLING
 # ==============================================================================
 st.set_page_config(
     page_title="V9.3 Interactive Betting Engine", layout="wide", page_icon="⚽"
@@ -446,7 +446,6 @@ with tab2:
         else 0.0
     )
 
-    # Key Summary Metrics Cards
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Settled Wagers", f"{len(settled_bets)}")
     m2.metric("Total Capital Staked", f"{total_wagered:,.2f}")
@@ -454,7 +453,6 @@ with tab2:
     m4.metric("ROI Yield", f"{roi_pct:+.2f}%")
     m5.metric("Win Rate", f"{win_rate:.1f}%")
 
-    # Interactive Profit Growth Chart
     chart_data = []
     running_pnl = 0.0
     for idx, bet in enumerate(settled_bets, start=1):
@@ -466,7 +464,6 @@ with tab2:
     df_chart = pd.DataFrame(chart_data)
     st.line_chart(df_chart, x="Bet Number", y="Cumulative Profit")
 
-    # Visual Outcome Breakdown
     st.markdown("#### Wager Outcome Distribution")
     st.progress(win_rate / 100.0 if win_rate > 0 else 0.0)
     st.caption(
@@ -502,7 +499,7 @@ with tab3:
       st.markdown(
           f"""
             <div class="history-card">
-                <div style="display:flex; justify-between; align-items:center; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <span style="color:#8b949e; font-size:0.85rem;"><b>ID #{bet['id']}</b> | {bet['date']} | {bet['league']}</span>
                     <div>{badge_html}</div>
                 </div>
