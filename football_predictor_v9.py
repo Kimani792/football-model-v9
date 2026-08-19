@@ -1,24 +1,21 @@
-import streamlit as st
 import json
 import os
+from datetime import date, datetime
 import numpy as np
-from datetime import datetime
+import streamlit as st
 
 # ==============================================================================
-# STREAMLIT UI & CUSTOM CSS (SPORTSBOOK THEME)
+# UI CONFIGURATION & CUSTOM CSS (SPORTSBOOK THEME WITH LOGOS)
 # ==============================================================================
-st.set_page_config(page_title="V9.3 Betting Engine", layout="wide")
+st.set_page_config(
+    page_title="V9.3 Interactive Betting Engine", layout="wide", page_icon="⚽"
+)
 
-# Custom CSS to mimic dynamic sports betting UI (DraftKings / SportPesa style)
-st.markdown("""
+st.markdown(
+    """
 <style>
-    /* Dark theme background */
-    .stApp {
-        background-color: #0d1117;
-        color: #f0f6fc;
-    }
+    .stApp { background-color: #0d1117; color: #f0f6fc; }
     
-    /* Sportsbook Card Styling */
     .bet-card {
         background: linear-gradient(135deg, #161b22 0%, #21262d 100%);
         border: 1px solid #30363d;
@@ -29,25 +26,42 @@ st.markdown("""
     }
     
     .match-header {
-        font-size: 1.2rem;
+        font-size: 0.95rem;
         font-weight: 700;
         color: #58a6ff;
         border-bottom: 1px solid #30363d;
         padding-bottom: 8px;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
+        letter-spacing: 0.5px;
     }
     
-    .prob-badge {
-        background-color: #1f6feb;
+    .team-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .team-logo {
+        width: 38px;
+        height: 38px;
+        object-fit: contain;
+        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
+    }
+    
+    .team-name {
+        font-size: 1.35rem;
+        font-weight: 800;
         color: #ffffff;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        display: inline-block;
     }
     
-    /* Value Pick Highlight Box */
+    .vs-divider {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #8b949e;
+        margin: 4px 0 10px 50px;
+    }
+    
     .value-box {
         background-color: rgba(46, 160, 67, 0.15);
         border: 1px solid #2ea043;
@@ -55,140 +69,413 @@ st.markdown("""
         padding: 12px;
         margin-top: 15px;
     }
-    
-    .value-title {
-        color: #3fb950;
-        font-size: 0.9rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .odds-chip {
-        background-color: #238636;
-        color: #ffffff;
-        font-weight: bold;
-        padding: 6px 12px;
-        border-radius: 6px;
-        float: right;
-        font-size: 1.1rem;
-    }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# Application Header
-st.title("⚡ V9.3 PREDICTOR ENGINE")
-st.caption("AI-Powered Sportsbook Model & Dynamic Value Finder")
+st.title("⚽ Predictor, Stake Allocator & P/L Tracker")
+st.caption(
+    "Set bankroll allocations, analyze matches with team badges, and track real-time P/L."
+)
 st.divider()
 
 # ==============================================================================
-# 1. TRACKER LOGIC
+# FIXTURE DATABASE (WITH TEAM LOGO URLS)
+# ==============================================================================
+FIXTURE_DATABASE = [
+    {
+        "date": "2026-08-19",
+        "league": "La Liga",
+        "match": "Atlético Madrid vs Málaga CF",
+        "home": "Atlético Madrid",
+        "away": "Málaga CF",
+        "home_logo": "https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg",
+        "away_logo": "https://upload.wikimedia.org/wikipedia/en/8/82/Malaga_cf.svg",
+        "home_xg": 2.15,
+        "away_xg": 0.55,
+        "suggested_bet": "Atlético Madrid -1.25 AH",
+        "prob": 0.72,
+        "odds": 1.95,
+        "closing_odds": 1.88,
+    },
+    {
+        "date": "2026-08-20",
+        "league": "Serie A",
+        "match": "Inter Milan vs Parma",
+        "home": "Inter Milan",
+        "away": "Parma",
+        "home_logo": "https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg",
+        "away_logo": "https://upload.wikimedia.org/wikipedia/en/a/a9/Parma_Calcio_1913_logo.svg",
+        "home_xg": 2.10,
+        "away_xg": 0.70,
+        "suggested_bet": "Inter Milan Win & Over 1.5 Goals",
+        "prob": 0.68,
+        "odds": 1.65,
+        "closing_odds": 1.60,
+    },
+    {
+        "date": "2026-08-21",
+        "league": "Premier League (EPL)",
+        "match": "Arsenal vs Coventry City",
+        "home": "Arsenal",
+        "away": "Coventry City",
+        "home_logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+        "away_logo": "https://upload.wikimedia.org/wikipedia/en/9/94/Coventry_City_FC_logo.svg",
+        "home_xg": 2.45,
+        "away_xg": 0.40,
+        "suggested_bet": "Arsenal -1.5 Asian Handicap",
+        "prob": 0.785,
+        "odds": 1.75,
+        "closing_odds": 1.68,
+    },
+    {
+        "date": "2026-08-21",
+        "league": "Premier League (EPL)",
+        "match": "Chelsea vs Fulham",
+        "home": "Chelsea",
+        "away": "Fulham",
+        "home_logo": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg",
+        "away_logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Fulham_FC_%28shield%29.svg",
+        "home_xg": 1.90,
+        "away_xg": 1.10,
+        "suggested_bet": "Over 2.5 Total Goals",
+        "prob": 0.58,
+        "odds": 1.85,
+        "closing_odds": 1.80,
+    },
+    {
+        "date": "2026-08-22",
+        "league": "Bundesliga",
+        "match": "Bayern Munich vs Augsburg",
+        "home": "Bayern Munich",
+        "away": "Augsburg",
+        "home_logo": "https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg",
+        "away_logo": "https://upload.wikimedia.org/wikipedia/en/c/c5/FC_Augsburg_logo.svg",
+        "home_xg": 2.80,
+        "away_xg": 0.60,
+        "suggested_bet": "Bayern Munich -2.0 AH",
+        "prob": 0.70,
+        "odds": 1.90,
+        "closing_odds": 1.82,
+    },
+]
+
+
+# ==============================================================================
+# AUTOMATED CLV TRACKER CLASS
 # ==============================================================================
 class AutomatedCLVTracker:
-    def __init__(self, log_file="clv_tracker_2026_27.json"):
-        self.log_file = log_file
-        self.entries = self._load_tracker()
 
-    def _load_tracker(self):
-        if os.path.exists(self.log_file):
-            try:
-                with open(self.log_file, "r") as f:
-                    return json.load(f)
-            except Exception:
-                return []
+  def __init__(self, log_file="clv_tracker_2026_27.json"):
+    self.log_file = log_file
+    self.entries = self._load_tracker()
+
+  def _load_tracker(self):
+    if os.path.exists(self.log_file):
+      try:
+        with open(self.log_file, "r") as f:
+          return json.load(f)
+      except Exception:
         return []
+    return []
 
-    def log_bet(self, league: str, match: str, bet_type: str, taken_odds: float, closing_odds: float, stake: float):
-        clv_pct = ((taken_odds / closing_odds) - 1.0) * 100.0
-        entry = {
-            "id": len(self.entries) + 1,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "league": league.upper(),
-            "match": match,
-            "bet_type": bet_type,
-            "taken_odds": float(taken_odds),
-            "closing_odds": float(closing_odds),
-            "clv_pct": round(clv_pct, 2),
-            "stake": float(stake),
-            "result": "PENDING"
-        }
-        self.entries.append(entry)
-        with open(self.log_file, "w") as f:
-            json.dump(self.entries, f, indent=4)
-        return clv_pct
+  def log_bet(
+      self,
+      league: str,
+      match: str,
+      bet_type: str,
+      taken_odds: float,
+      closing_odds: float,
+      recommended_stake: float,
+      actual_stake: float,
+  ):
+    clv_pct = ((taken_odds / closing_odds) - 1.0) * 100.0
+    entry = {
+        "id": len(self.entries) + 1,
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "league": league.upper(),
+        "match": match,
+        "bet_type": bet_type,
+        "taken_odds": float(taken_odds),
+        "closing_odds": float(closing_odds),
+        "clv_pct": round(clv_pct, 2),
+        "recommended_stake": float(recommended_stake),
+        "actual_stake": float(actual_stake),
+        "payout": 0.0,
+        "profit_loss": 0.0,
+        "result": "PENDING",
+    }
+    self.entries.append(entry)
+    self._save()
+    return clv_pct
+
+  def update_result(
+      self, bet_id: int, result: str, actual_stake: float = None
+  ):
+    for entry in self.entries:
+      if entry["id"] == bet_id:
+        if actual_stake is not None:
+          entry["actual_stake"] = float(actual_stake)
+
+        stake = entry["actual_stake"]
+        odds = entry["taken_odds"]
+        res = result.upper()
+
+        if res == "WIN":
+          entry["payout"] = round(stake * odds, 2)
+          entry["profit_loss"] = round(stake * (odds - 1.0), 2)
+        elif res == "LOSS":
+          entry["payout"] = 0.0
+          entry["profit_loss"] = round(-stake, 2)
+        elif res == "PUSH":
+          entry["payout"] = round(stake, 2)
+          entry["profit_loss"] = 0.0
+
+        entry["result"] = res
+        self._save()
+        return True
+    return False
+
+  def _save(self):
+    with open(self.log_file, "w") as f:
+      json.dump(self.entries, f, indent=4)
+
 
 tracker = AutomatedCLVTracker()
 
 # ==============================================================================
-# 2. MATCHDAY CARDS (BETTING APP UI)
+# DASHBOARD TABS
 # ==============================================================================
-st.subheader("🔥 High Expected Value (+EV) Picks")
+tab1, tab2, tab3 = st.tabs([
+    "📅 Match Selection & Staking Panel",
+    "📊 Model Performance & Result Tracker",
+    "📜 Full Bet History Log",
+])
 
-col1, col2 = st.columns(2)
+# ------------------------------------------------------------------------------
+# TAB 1: MATCH SELECTION & STAKING PANEL
+# ------------------------------------------------------------------------------
+with tab1:
+  st.subheader("1. Capital & Risk Configuration")
 
-with col1:
-    st.markdown("""
-    <div class="bet-card">
-        <div class="match-header">⚽ PREMIER LEAGUE</div>
-        <h3 style="margin:0;">Arsenal vs Coventry City</h3>
-        <p style="color:#8b949e; margin-top:5px;">Model Win Prob: <span class="prob-badge">78.5% Arsenal</span></p>
-        <p style="color:#8b949e;">Expected Goals (xG): <b>2.45 - 0.40</b></p>
-        
-        <div class="value-box">
-            <span class="odds-chip">1.75</span>
-            <div class="value-title">🎯 TOP VALUE SELECTION</div>
-            <div style="font-size:1.1rem; font-weight:bold; margin-top:4px;">Arsenal -1.5 Asian Handicap</div>
-            <div style="color:#3fb950; font-size:0.85rem; margin-top:4px;">+7.6% Calculated Edge</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+  col_bankroll, col_kelly = st.columns([1, 1])
+  with col_bankroll:
+    total_bankroll = st.number_input(
+        "Total Bankroll Capital (100%)",
+        value=10000.0,
+        step=500.0,
+        help="Enter your total available sports betting bankroll.",
+    )
+  with col_kelly:
+    kelly_fraction = st.select_slider(
+        "Model Risk Strategy (Kelly Fraction)",
+        options=[
+            "1/8 Kelly (Conservative)",
+            "1/4 Kelly (Recommended)",
+            "Half Kelly (Aggressive)",
+        ],
+        value="1/4 Kelly (Recommended)",
+    )
+    frac_mult = (
+        0.125
+        if "1/8" in kelly_fraction
+        else (0.25 if "1/4" in kelly_fraction else 0.50)
+    )
 
-with col2:
-    st.markdown("""
-    <div class="bet-card">
-        <div class="match-header">⚽ LA LIGA</div>
-        <h3 style="margin:0;">Atlético Madrid vs Málaga CF</h3>
-        <p style="color:#8b949e; margin-top:5px;">Model Win Prob: <span class="prob-badge">72.0% Atlético</span></p>
-        <p style="color:#8b949e;">Expected Goals (xG): <b>2.15 - 0.55</b></p>
-        
-        <div class="value-box">
-            <span class="odds-chip">1.95</span>
-            <div class="value-title">🎯 TOP VALUE SELECTION</div>
-            <div style="font-size:1.1rem; font-weight:bold; margin-top:4px;">Atlético Madrid -1.25 AH</div>
-            <div style="color:#3fb950; font-size:0.85rem; margin-top:4px;">+19.9% Calculated Edge</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+  st.divider()
+  st.subheader("2. Fixture Selection & Visual Match Card")
 
-st.divider()
+  c_filter, c_card = st.columns([1, 1.2])
 
-# ==============================================================================
-# 3. INTERACTIVE BET SLIP LOGGING
-# ==============================================================================
-st.subheader("📲 Quick Bet Slip Tracker")
+  with c_filter:
+    selected_date = st.date_input(
+        "Select Match Date",
+        value=date(2026, 8, 21),
+        min_value=date(2026, 8, 1),
+        max_value=date(2026, 9, 30),
+    )
+    date_str = selected_date.strftime("%Y-%m-%d")
 
-with st.form("bet_form"):
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        league_input = st.selectbox("League", ["EPL", "LA_LIGA", "SERIE_A", "BUNDESLIGA"])
-        match_input = st.text_input("Match", "Arsenal vs Coventry City")
-    with c2:
-        bet_input = st.text_input("Selection", "Arsenal -1.5 AH")
-        taken_odds_input = st.number_input("Odds Taken", value=1.75)
-    with c3:
-        closing_odds_input = st.number_input("Closing Odds", value=1.68)
-        stake_input = st.number_input("Stake Units", value=200.0)
-    
-    submitted = st.form_submit_button("⚡ LOG BET SLIP")
-    if submitted:
-        clv = tracker.log_bet(league_input, match_input, bet_input, taken_odds_input, closing_odds_input, stake_input)
-        st.success(f"Bet Slip Recorded! Calculated Closing Line Value (CLV): {clv:+.2f}%")
+    matches_on_date = [m for m in FIXTURE_DATABASE if m["date"] == date_str]
 
-st.divider()
+    if matches_on_date:
+      leagues = sorted(list(set([m["league"] for m in matches_on_date])))
+      selected_league = st.selectbox("Select League", leagues)
+      league_matches = [
+          m for m in matches_on_date if m["league"] == selected_league
+      ]
+      selected_match_title = st.selectbox(
+          "Select Match", [m["match"] for m in league_matches]
+      )
+      match_data = next(
+          (m for m in league_matches if m["match"] == selected_match_title),
+          None,
+      )
+    else:
+      st.warning(
+          f"No scheduled fixtures found for {date_str}. Showing fallback"
+          " match."
+      )
+      match_data = FIXTURE_DATABASE[2]
 
-# Display Current Tracker JSON
-st.subheader("📜 Active Wagers")
-if tracker.entries:
-    st.json(tracker.entries)
-else:
-    st.info("No active wagers logged in tracker yet.")
+  with c_card:
+    if match_data:
+      p = match_data["prob"]
+      b = match_data["odds"] - 1.0
+      q = 1.0 - p
+      raw_kelly = (b * p - q) / b if b > 0 else 0
+      rec_stake_pct = max(0.0, min(raw_kelly * frac_mult * 100.0, 3.0))
+      rec_stake_cash = (rec_stake_pct / 100.0) * total_bankroll
+      ev_pct = ((p * match_data["odds"]) - 1.0) * 100.0
+
+      # Dynamic HTML Card displaying team logos
+      st.markdown(
+          f"""
+            <div class="bet-card">
+                <div class="match-header">⚽ {match_data['league'].upper()} &nbsp;|&nbsp; {match_data['date']}</div>
+                
+                <div class="team-box">
+                    <img src="{match_data['home_logo']}" class="team-logo" />
+                    <span class="team-name">{match_data['home']}</span>
+                </div>
+                
+                <div class="vs-divider">VS</div>
+                
+                <div class="team-box">
+                    <img src="{match_data['away_logo']}" class="team-logo" />
+                    <span class="team-name">{match_data['away']}</span>
+                </div>
+                
+                <p style="color:#8b949e; margin-top:14px; margin-bottom:0;">
+                    Model Win Prob: <b>{p*100:.1f}%</b> &nbsp;|&nbsp; Calculated Edge: <b style="color:#3fb950;">+{ev_pct:.2f}% EV</b>
+                </p>
+                
+                <div class="value-box">
+                    <span style="float:right; font-size:1.3rem; font-weight:bold; color:#2ea043;">{match_data['odds']}</span>
+                    <div style="color:#3fb950; font-weight:bold; font-size:0.85rem; text-transform:uppercase;">🎯 RECOMMENDED VALUE SELECTION</div>
+                    <div style="font-size:1.1rem; font-weight:bold; margin-top:4px;">{match_data['suggested_bet']}</div>
+                </div>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+
+      st.markdown("#### 3. Log Bet Slip Wager")
+      with st.form("stake_entry_form"):
+        st.info(
+            f"💡 **Model Recommended Stake:** **{rec_stake_pct:.2f}%** of"
+            f" Bankroll (**{rec_stake_cash:,.2f}** units)"
+        )
+        actual_stake_input = st.number_input(
+            "Enter Actual Stake Wagered",
+            value=float(round(rec_stake_cash, 2)),
+            step=50.0,
+        )
+
+        log_submitted = st.form_submit_button("⚡ Place & Log Bet Slip")
+        if log_submitted:
+          clv = tracker.log_bet(
+              match_data["league"],
+              match_data["match"],
+              match_data["suggested_bet"],
+              match_data["odds"],
+              match_data["closing_odds"],
+              rec_stake_cash,
+              actual_stake_input,
+          )
+          st.success(f"Bet Slip Logged! Calculated CLV: {clv:+.2f}%")
+
+# ------------------------------------------------------------------------------
+# TAB 2: RESULT TRACKER & PERFORMANCE ANALYTICS
+# ------------------------------------------------------------------------------
+with tab2:
+  st.subheader("Match Result Input Window")
+
+  pending_bets = [e for e in tracker.entries if e.get("result") == "PENDING"]
+
+  if pending_bets:
+    c_update1, c_update2 = st.columns([1.5, 1])
+
+    with c_update1:
+      bet_options = {
+          f"ID {b['id']}: {b['match']} ({b['bet_type']} @ {b['taken_odds']})": (
+              b["id"]
+          )
+          for b in pending_bets
+      }
+      selected_bet_label = st.selectbox(
+          "Select Pending Wager to Update", list(bet_options.keys())
+      )
+      target_id = bet_options[selected_bet_label]
+      target_bet = next(b for b in pending_bets if b["id"] == target_id)
+
+    with c_update2:
+      with st.form("result_update_form"):
+        actual_staked_final = st.number_input(
+            "Final Staked Amount", value=float(target_bet["actual_stake"])
+        )
+        match_outcome = st.selectbox(
+            "Match Outcome", ["WIN", "LOSS", "PUSH"]
+        )
+        update_btn = st.form_submit_button("Submit Match Result")
+
+        if update_btn:
+          tracker.update_result(
+              target_id, match_outcome, actual_staked_final
+          )
+          st.success(
+              f"Bet ID {target_id} updated to {match_outcome}! Performance"
+              " metrics recalculated."
+          )
+          st.rerun()
+  else:
+    st.info("No pending bets waiting for result input.")
+
+  st.divider()
+  st.subheader("📈 Overall Model Validation & Profit Analytics")
+
+  settled_bets = [e for e in tracker.entries if e.get("result") != "PENDING"]
+
+  if settled_bets:
+    total_wagered = sum(b["actual_stake"] for b in settled_bets)
+    total_pnl = sum(b["profit_loss"] for b in settled_bets)
+    wins = len([b for b in settled_bets if b["result"] == "WIN"])
+    total_settled = len(
+        [b for b in settled_bets if b["result"] in ["WIN", "LOSS"]]
+    )
+
+    win_rate = (wins / total_settled * 100.0) if total_settled > 0 else 0.0
+    roi_pct = (total_pnl / total_wagered * 100.0) if total_wagered > 0 else 0.0
+    avg_clv = np.mean([b["clv_pct"] for b in tracker.entries])
+
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("Total Settled Bets", f"{len(settled_bets)}")
+    m2.metric("Total Capital Staked", f"{total_wagered:,.2f}")
+    m3.metric("Net Profit / Loss", f"{total_pnl:+,.2f}")
+    m4.metric("Return on Investment (ROI)", f"{roi_pct:+.2f}%")
+    m5.metric("Model Win Rate", f"{win_rate:.1f}%")
+
+    if roi_pct > 0:
+      st.success(
+          f"✅ **STRATEGY IS PROFITABLE**: Current Yield is **+{roi_pct:.2f}%**"
+          f" across {len(settled_bets)} settled bets with average CLV of"
+          f" **+{avg_clv:.2f}%**."
+      )
+    else:
+      st.error(
+          f"❌ **STRATEGY IS UNDERPERFORMING**: Net loss of"
+          f" **{total_pnl:,.2f}** ({roi_pct:.2f}% ROI)."
+      )
+  else:
+    st.info("No settled bets recorded yet. Mark a pending wager as WIN/LOSS.")
+
+# ------------------------------------------------------------------------------
+# TAB 3: FULL BET HISTORY LOG
+# ------------------------------------------------------------------------------
+with tab3:
+  st.subheader("Complete Wager History Log")
+  if tracker.entries:
+    st.dataframe(tracker.entries, use_container_width=True)
+  else:
+    st.info("No bet slips logged in `clv_tracker_2026_27.json`.")
