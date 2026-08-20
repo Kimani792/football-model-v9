@@ -1,0 +1,12 @@
+{
+  "_readme": "Fill this in with real rolling-6-game xG-derived attack/defense strengths (per league_averages_xg_per_team baseline in v9_params.json), rename to team_ratings.json, and drop it next to sportpesa_predictor_v2.py. Until then the app uses de-vigged market odds instead of guessing.",
+  "_attack_defense_definition": "attack = team's rolling avg xG scored / league avg xG per team. defense = team's rolling avg xG conceded / league avg xG per team.",
+  "La Liga": {
+    "Real Madrid": {"attack": 1.00, "defense": 1.00},
+    "Barcelona": {"attack": 1.00, "defense": 1.00}
+  },
+  "Premier League": {},
+  "Serie A": {},
+  "Bundesliga": {},
+  "Ligue 1": {}
+}
