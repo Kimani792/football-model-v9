@@ -1,0 +1,27 @@
+{
+  "Premier League": {
+    "Arsenal": {"attack": 1.45, "defense": 0.75},
+    "Manchester City": {"attack": 1.50, "defense": 0.80},
+    "Liverpool": {"attack": 1.40, "defense": 0.85},
+    "Chelsea": {"attack": 1.30, "defense": 0.95}
+  },
+  "La Liga": {
+    "Real Madrid": {"attack": 1.52, "defense": 0.78},
+    "FC Barcelona": {"attack": 1.48, "defense": 0.82},
+    "Atletico Madrid": {"attack": 1.25, "defense": 0.70}
+  },
+  "Serie A": {
+    "Inter": {"attack": 1.40, "defense": 0.72},
+    "AC Milan": {"attack": 1.32, "defense": 0.88},
+    "Juventus": {"attack": 1.28, "defense": 0.75}
+  },
+  "Bundesliga": {
+    "Bayern Munich": {"attack": 1.55, "defense": 0.82},
+    "Bayer Leverkusen": {"attack": 1.42, "defense": 0.80},
+    "Borussia Dortmund": {"attack": 1.38, "defense": 0.90}
+  },
+  "Ligue 1": {
+    "Paris Saint Germain": {"attack": 1.50, "defense": 0.80},
+    "Monaco": {"attack": 1.30, "defense": 0.92}
+  }
+}
